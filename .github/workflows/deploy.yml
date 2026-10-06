@@ -1,53 +1,42 @@
-name: Deploy AI Tools Hub to App Service
+name: Deploy AI Tools Hub (sandbox)
 
 on:
   workflow_dispatch:
 
 env:
-  RESOURCE_GROUP: rg-ai-tools-hub
-  WEBAPP_NAME: aihub-test-xj01
-  REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+  RESOURCE_GROUP: user-fcbuseecayaj
+  WEBAPP_NAME: aihub-test-24653
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Check tools
-        run: |
-          az version
-          zip -v | head -2
+      - uses: actions/checkout@v4
 
       - name: Package site
         run: |
           cd site
           zip -r ../site.zip .
-          unzip -l ../site.zip
 
       - name: Azure login
-        run: |
-          az login --service-principal \
-            -u "${{ secrets.AZURE_CLIENT_ID }}" \
-            -p "${{ secrets.AZURE_CLIENT_SECRET }}" \
-            --tenant "${{ secrets.AZURE_TENANT_ID }}"
-          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+        uses: azure/login@v2
+        with:
+          creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
 
-      - name: Deploy zip to App Service
+      - name: Deploy zip
         run: |
           az webapp deploy \
             --resource-group "$RESOURCE_GROUP" \
             --name "$WEBAPP_NAME" \
             --src-path site.zip \
-            --type zip
+            --type zip \
+            --clean true
 
       - name: Smoke test
         run: |
-          sleep 20
+          sleep 15
           curl -fsS "https://${WEBAPP_NAME}.azurewebsites.net" | grep -i "AI Tools Hub"
 
       - name: Logout
         if: always()
-        run: az logout || true
+        run: az logout

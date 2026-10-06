@@ -1,0 +1,35 @@
+name: Deploy AI Tools Hub (OIDC test)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  RESOURCE_GROUP: user-fcbuseecayaj
+  WEBAPP_NAME: aihub-test-24653
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Package site
+        run: |
+          cd site
+          zip -r ../site.zip .
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy zip
+        run: |
+          az webapp deploy -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" \
+            --src-path site.zip --type zip --clean true
